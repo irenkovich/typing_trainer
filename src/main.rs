@@ -39,18 +39,25 @@ fn main() {
                 print_hint(&hint_map, target_char);
             }
 
-            let continue_to_train = process_user_input(
-                &mut content,
-                &mut counter,
-                &mut counter_in_row,
-                &mut should_print_hint,
-                rand_index,
-                &mut rand_el,
-                target_char,
-            );
+            let user_input = process_user_input(target_char);
 
-            if !continue_to_train {
-                break 'main_loop;
+            match user_input {
+                UserInput::Request(UserRequest::Exit) => break 'main_loop,
+                UserInput::Request(UserRequest::Hint) => {
+                    should_print_hint = true;
+                }
+                UserInput::Guess { correct } => {
+                    if correct {
+                        counter += 1;
+                        rand_el = rand_el.chars().skip(1).collect();
+                        counter_in_row += 1;
+                        content.remove(rand_index);
+                    } else {
+                        counter_in_row = 0;
+                    }
+
+                    should_print_hint = false;
+                }
             }
         }
     }
@@ -60,47 +67,38 @@ fn main() {
     println!("Great job!");
 }
 
-//return false on exit
-fn process_user_input(
-    content: &mut Vec<String>,
-    counter: &mut i32,
-    counter_in_row: &mut i32,
-    should_print_hint: &mut bool,
-    rand_index: usize,
-    rand_el: &mut String,
-    target_char: char,
-) -> bool {
+enum UserRequest {
+    Hint,
+    Exit,
+}
+
+enum UserInput {
+    Request(UserRequest),
+    Guess { correct: bool },
+}
+
+fn process_user_input(target_char: char) -> UserInput {
     listen_keys_pressing();
 
-    let continue_to_play = if let Event::Key(key_event) = event::read().unwrap() {
+    let result = if let Event::Key(key_event) = event::read().unwrap() {
         match key_event.code {
-            KeyCode::Esc => false,
+            KeyCode::Esc => UserInput::Request(UserRequest::Exit),
             KeyCode::Char(c) => {
                 let guess = c.to_lowercase().next().unwrap();
-                if guess == target_char {
-                    *counter += 1;
-                    *rand_el = rand_el.chars().skip(1).collect();
-                    *counter_in_row += 1;
-                    *should_print_hint = false;
-                    content.remove(rand_index);
-                } else {
-                    *counter_in_row = 0;
+                UserInput::Guess {
+                    correct: guess == target_char,
                 }
-                true
             }
-            KeyCode::Backspace => {
-                *should_print_hint = true;
-                true
-            }
-            _ => true,
+            KeyCode::Backspace => UserInput::Request(UserRequest::Hint),
+            _ => UserInput::Guess { correct: false },
         }
     } else {
-        true
+        UserInput::Guess { correct: false }
     };
 
     stop_listening_keys_pressing();
 
-    continue_to_play
+    result
 }
 
 fn stop_listening_keys_pressing() {
@@ -123,8 +121,7 @@ fn print_instructions(counter: i32, counter_in_row: i32, rand_el: &String) {
     let sweet_words = get_sweet_words_for_typer(counter_in_row);
     println!("Press esc for exit, backspace for hint.");
     println!();
-    println!("{sweet_words}");
-    println!("Scores: {counter}.");
+    println!("Scores: {counter}. {sweet_words}");
     println!();
     println!("{rand_el}");
 }
