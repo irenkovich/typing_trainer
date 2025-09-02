@@ -51,7 +51,6 @@ fn main() {
                         counter += 1;
                         rand_el = rand_el.chars().skip(1).collect();
                         counter_in_row += 1;
-                        content.remove(rand_index);
                     } else {
                         counter_in_row = 0;
                     }
@@ -60,6 +59,7 @@ fn main() {
                 }
             }
         }
+        content.remove(rand_index);
     }
     let elapsed_secs = start.elapsed().as_secs();
 
