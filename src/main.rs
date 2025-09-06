@@ -7,6 +7,7 @@ use std::{
 
 use crossterm::{
     event::{self, Event, KeyCode},
+    style::Stylize,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use rand::Rng;
@@ -63,7 +64,10 @@ fn main() {
     }
     let elapsed_secs = start.elapsed().as_secs();
 
-    println!("You were learning for {elapsed_secs} seconds!");
+    println!(
+        "You were learning for {} seconds!",
+        elapsed_secs.to_string().green()
+    );
     println!("Great job!");
 }
 
@@ -113,28 +117,41 @@ fn listen_keys_pressing() {
 fn print_hint(hint_map: &HashMap<char, String>, target_char: char) {
     let hint = hint_map
         .get(&target_char)
-        .map_or(String::from("No hint for this :("), |x| x.clone());
+        .map_or(String::from("No hint for this :("), |x| x.clone())
+        .green();
     println!("{hint}");
 }
 
-fn print_instructions(counter: i32, counter_in_row: i32, rand_el: &String) {
+fn print_instructions(counter: i32, counter_in_row: i32, rand_el: &str) {
     let sweet_words = get_sweet_words_for_typer(counter_in_row);
-    println!("Press esc for exit, backspace for hint.");
+    println!(
+        "Press {} for exit, {} for hint.",
+        "ESC".yellow(),
+        "Backspace".yellow()
+    );
     println!();
-    println!("Scores: {counter}. {sweet_words}");
+    println!("Scores: {}. {sweet_words}", counter.to_string().green());
     println!();
-    println!("{rand_el}");
+
+    let fisrt_char = if counter_in_row == 0 {
+        rand_el.chars().next().unwrap().on_red()
+    } else {
+        rand_el.chars().next().unwrap().on_blue()
+    };
+    let other_part: String = rand_el.chars().skip(1).collect();
+    println!("{fisrt_char}{other_part}");
 }
 
 fn get_sweet_words_for_typer(counter_in_row: i32) -> String {
+    let counter_in_row_str = counter_in_row.to_string().green();
     match counter_in_row {
-        3..=50 => format!("Wow! {counter_in_row} in a row! Let's do it!"),
-        51..=100 => format!("{counter_in_row} in a row! You know something, don't you?"),
-        101..=200 => format!("Proffesional typer! {counter_in_row} in a row!"),
-        201..=500 => format!("SOMEONE STOP THIS KEYS-REAPER! {counter_in_row} IN A ROW!"),
+        3..=50 => format!("Wow! {counter_in_row_str} in a row! Let's do it!"),
+        51..=100 => format!("{counter_in_row_str} in a row! You know something, don't you?"),
+        101..=200 => format!("Proffesional typer! {counter_in_row_str} in a row!"),
+        201..=500 => format!("SOMEONE STOP THIS KEYS-REAPER! {counter_in_row_str} IN A ROW!"),
         501..30000 => {
             format!(
-                "Don't you want to relax a bit, perfectionsim-cultist? {counter_in_row} in a row."
+                "Don't you want to relax a bit, perfectionsim-cultist? {counter_in_row_str} in a row."
             )
         }
         _ => String::new(),
