@@ -53,34 +53,35 @@ impl Display for HintLoadError {
 }
 
 fn load_builtin_hints() -> HashMap<char, String> {
-    let hints: Result<HashMap<char, String>, HintLoadError> = include_str!("data/hints.txt")
-        .lines()
-        .enumerate()
-        .map(|(line_number, line_value)| {
-            let (key, value) = line_value
-                .split_once(":")
-                .ok_or_else(|| HintLoadError::InvalidFormat(line_number, line_value.to_string()))?;
+    let hints: Result<HashMap<char, String>, HintLoadError> =
+        include_str!("data/hints/russian.txt")
+            .lines()
+            .enumerate()
+            .map(|(line_number, line_value)| {
+                let (key, value) = line_value.split_once(":").ok_or_else(|| {
+                    HintLoadError::InvalidFormat(line_number, line_value.to_string())
+                })?;
 
-            let key = key
-                .chars()
-                .next()
-                .ok_or(HintLoadError::EmptyKey(line_number))?;
+                let key = key
+                    .chars()
+                    .next()
+                    .ok_or(HintLoadError::EmptyKey(line_number))?;
 
-            if value.is_empty() {
-                Err(HintLoadError::EmptyValue(line_number))?;
-            }
+                if value.is_empty() {
+                    Err(HintLoadError::EmptyValue(line_number))?;
+                }
 
-            let value = value.to_string();
+                let value = value.to_string();
 
-            Ok((key, value))
-        })
-        .collect();
+                Ok((key, value))
+            })
+            .collect();
 
     hints.unwrap_or_else(|e| panic!("Error on loading hints: {e}"))
 }
 
 fn load_builtin_content() -> Vec<String> {
-    let content: Vec<String> = include_str!("data/content.txt")
+    let content: Vec<String> = include_str!("data/tasks/russian.txt")
         .lines()
         .map(|x| x.to_lowercase())
         .collect();
