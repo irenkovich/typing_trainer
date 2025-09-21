@@ -64,6 +64,10 @@ impl State {
     pub fn last_guess_err(&self) -> bool {
         self.last_guess_err
     }
+
+    pub fn get_expected_char(&self) -> char {
+        self.current_task.chars().next().unwrap()
+    }
 }
 
 impl Default for State {
