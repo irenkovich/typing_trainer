@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::{self, Display},
-    process::Command,
-    time::Instant,
-};
+use std::{collections::HashMap, process::Command, time::Instant};
 
 use crossterm::{
     event::{self, Event, KeyCode},
@@ -12,32 +7,39 @@ use crossterm::{
 };
 use rand::Rng;
 
+use crate::{
+    data::{ProgramData, Resource},
+    state::State,
+};
+
+pub mod data;
+pub mod state;
+
 fn main() {
     clear_terminal();
-    let mut content = load_content();
+    let program_data = ProgramData::default();
 
-    let hint_map = load_hints();
+    let mut content = program_data.get_content().clone();
 
-    let mut counter = 0;
-    let mut counter_in_row = 0;
+    let hint_map = program_data.get_hints();
+
+    let mut state = State::new();
     let mut rng = rand::rng();
-
-    let mut should_print_hint = false;
 
     let start = Instant::now();
     'main_loop: while !content.is_empty() {
         let rand_index = Rng::random_range(&mut rng, 0..content.len());
-        let mut rand_el = content.get(rand_index).unwrap().clone();
+        state.set_current_task(content.get(rand_index).unwrap());
 
-        while !rand_el.is_empty() {
+        while state.task_in_progress() {
             clear_terminal();
 
-            print_instructions(counter, counter_in_row, &rand_el);
+            print_instructions(&state);
 
-            let target_char = rand_el.chars().next().unwrap();
+            let target_char = state.current_task().chars().next().unwrap();
 
-            if should_print_hint {
-                print_hint(&hint_map, target_char);
+            if state.print_hint() {
+                print_hint(hint_map, target_char);
             }
 
             let user_input = process_user_input(target_char);
@@ -45,18 +47,16 @@ fn main() {
             match user_input {
                 UserInput::Request(UserRequest::Exit) => break 'main_loop,
                 UserInput::Request(UserRequest::Hint) => {
-                    should_print_hint = true;
+                    state.enable_hint();
                 }
                 UserInput::Guess { correct } => {
                     if correct {
-                        counter += 1;
-                        rand_el = rand_el.chars().skip(1).collect();
-                        counter_in_row += 1;
+                        state.process_right_guess();
                     } else {
-                        counter_in_row = 0;
+                        state.process_incorrect_guess();
                     }
 
-                    should_print_hint = false;
+                    state.disable_hint();
                 }
             }
         }
@@ -122,7 +122,11 @@ fn print_hint(hint_map: &HashMap<char, String>, target_char: char) {
     println!("{hint}");
 }
 
-fn print_instructions(counter: i32, counter_in_row: i32, rand_el: &str) {
+fn print_instructions(state: &State) {
+    let counter_in_row = state.in_row();
+    let counter = state.counter();
+    let task = state.current_task();
+
     let sweet_words = get_sweet_words_for_typer(counter_in_row);
     println!(
         "Press {} for exit, {} for hint.",
@@ -133,16 +137,16 @@ fn print_instructions(counter: i32, counter_in_row: i32, rand_el: &str) {
     println!("Scores: {}. {sweet_words}", counter.to_string().green());
     println!();
 
-    let fisrt_char = if counter_in_row == 0 {
-        rand_el.chars().next().unwrap().on_red()
+    let fisrt_char = if state.last_guess_err() {
+        task.chars().next().unwrap().on_red()
     } else {
-        rand_el.chars().next().unwrap().on_blue()
+        task.chars().next().unwrap().on_blue()
     };
-    let other_part: String = rand_el.chars().skip(1).collect();
+    let other_part: String = task.chars().skip(1).collect();
     println!("{fisrt_char}{other_part}");
 }
 
-fn get_sweet_words_for_typer(counter_in_row: i32) -> String {
+fn get_sweet_words_for_typer(counter_in_row: u32) -> String {
     let counter_in_row_str = counter_in_row.to_string().green();
     match counter_in_row {
         3..=50 => format!("Wow! {counter_in_row_str} in a row! Let's do it!"),
@@ -156,66 +160,6 @@ fn get_sweet_words_for_typer(counter_in_row: i32) -> String {
         }
         _ => String::new(),
     }
-}
-
-fn load_content() -> Vec<String> {
-    let content: Vec<String> = include_str!("data/content.txt")
-        .lines()
-        .map(|x| x.to_lowercase())
-        .collect();
-
-    if content.is_empty() {
-        panic!("No content to process, chech 'data/content.txt' file")
-    }
-
-    content
-}
-
-enum HintLoadError {
-    InvalidFormat(usize, String),
-    EmptyKey(usize),
-    EmptyValue(usize),
-}
-
-impl Display for HintLoadError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match self {
-            Self::InvalidFormat(line, value) => {
-                format!("invalid hint on loading. {line} line: {value}")
-            }
-            Self::EmptyKey(line) => format!("empty hint key on {line} line"),
-            Self::EmptyValue(line) => format!("empty hint value on {line} line"),
-        };
-
-        write!(f, "{msg}")
-    }
-}
-
-fn load_hints() -> HashMap<char, String> {
-    let hints: Result<HashMap<char, String>, HintLoadError> = include_str!("data/hints.txt")
-        .lines()
-        .enumerate()
-        .map(|(line_number, line_value)| {
-            let (key, value) = line_value
-                .split_once(":")
-                .ok_or_else(|| HintLoadError::InvalidFormat(line_number, line_value.to_string()))?;
-
-            let key = key
-                .chars()
-                .next()
-                .ok_or(HintLoadError::EmptyKey(line_number))?;
-
-            if value.is_empty() {
-                Err(HintLoadError::EmptyValue(line_number))?;
-            }
-
-            let value = value.to_string();
-
-            Ok((key, value))
-        })
-        .collect();
-
-    hints.unwrap_or_else(|e| panic!("Error on loading hints: {e}"))
 }
 
 fn clear_terminal() {
