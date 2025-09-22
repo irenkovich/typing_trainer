@@ -1,24 +1,50 @@
-use std::{
-    collections::HashMap,
-    fmt::{self, Display},
-};
+use std::{collections::HashMap, io::Cursor};
 
-pub trait Resource {
-    fn get_hints(&self) -> &HashMap<char, String>;
-    fn get_content(&self) -> &Vec<String>;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Task {
+    task: String,
+    metadata: Option<String>,
+}
+
+impl Task {
+    pub fn get_task(&self) -> &str {
+        &self.task
+    }
+
+    pub fn cut_first_in_task(&mut self) {
+        self.task = self.task.chars().skip(1).collect();
+    }
+}
+
+impl Default for Task {
+    //dummy
+    fn default() -> Self {
+        Task {
+            task: String::new(),
+            metadata: None,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Hint {
+    letter: char,
+    hint: String,
 }
 
 pub struct ProgramData {
     hints: HashMap<char, String>,
-    content: Vec<String>,
+    content: Vec<Task>,
 }
 
-impl Resource for ProgramData {
-    fn get_hints(&self) -> &HashMap<char, String> {
+impl ProgramData {
+    pub fn get_hints(&self) -> &HashMap<char, String> {
         &self.hints
     }
 
-    fn get_content(&self) -> &Vec<String> {
+    pub fn get_content(&self) -> &Vec<Task> {
         &self.content
     }
 }
@@ -32,63 +58,32 @@ impl Default for ProgramData {
     }
 }
 
-enum HintLoadError {
-    InvalidFormat(usize, String),
-    EmptyKey(usize),
-    EmptyValue(usize),
-}
-
-impl Display for HintLoadError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match self {
-            Self::InvalidFormat(line, value) => {
-                format!("invalid hint on loading. {line} line: {value}")
-            }
-            Self::EmptyKey(line) => format!("empty hint key on {line} line"),
-            Self::EmptyValue(line) => format!("empty hint value on {line} line"),
-        };
-
-        write!(f, "{msg}")
-    }
-}
-
 fn load_builtin_hints() -> HashMap<char, String> {
-    let hints: Result<HashMap<char, String>, HintLoadError> =
-        include_str!("data/hints/russian.txt")
-            .lines()
-            .enumerate()
-            .map(|(line_number, line_value)| {
-                let (key, value) = line_value.split_once(":").ok_or_else(|| {
-                    HintLoadError::InvalidFormat(line_number, line_value.to_string())
-                })?;
-
-                let key = key
-                    .chars()
-                    .next()
-                    .ok_or(HintLoadError::EmptyKey(line_number))?;
-
-                if value.is_empty() {
-                    Err(HintLoadError::EmptyValue(line_number))?;
-                }
-
-                let value = value.to_string();
-
-                Ok((key, value))
-            })
-            .collect();
-
-    hints.unwrap_or_else(|e| panic!("Error on loading hints: {e}"))
-}
-
-fn load_builtin_content() -> Vec<String> {
-    let content: Vec<String> = include_str!("data/tasks/russian.txt")
-        .lines()
-        .map(|x| x.to_lowercase())
-        .collect();
-
-    if content.is_empty() {
-        panic!("No content to process, chech 'data/content.txt' file")
+    let russian_hints = include_bytes!("data/hints/russian.csv");
+    let reader = Cursor::new(russian_hints);
+    let mut task_reader = csv::ReaderBuilder::new()
+        .delimiter(b'~')
+        .from_reader(reader);
+    let mut hints: HashMap<char, String> = HashMap::new();
+    for res in task_reader.deserialize() {
+        let hint: Hint = res.unwrap();
+        hints.insert(hint.letter, hint.hint);
     }
 
-    content
+    hints
+}
+
+fn load_builtin_content() -> Vec<Task> {
+    let russian_tasks = include_bytes!("data/tasks/russian.csv");
+    let reader = Cursor::new(russian_tasks);
+    let mut task_reader = csv::ReaderBuilder::new()
+        .delimiter(b'~')
+        .from_reader(reader);
+    let mut tasks: Vec<Task> = vec![];
+    for res in task_reader.deserialize() {
+        let task = res.unwrap();
+        tasks.push(task);
+    }
+
+    tasks
 }

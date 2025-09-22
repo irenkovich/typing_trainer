@@ -18,12 +18,9 @@ pub fn process_user_input(state: &State) -> UserInput {
     let result = if let Event::Key(key_event) = event::read().unwrap() {
         match key_event.code {
             KeyCode::Esc => UserInput::Request(UserRequest::Exit),
-            KeyCode::Char(c) => {
-                let guess = c.to_lowercase().next().unwrap();
-                UserInput::Guess {
-                    correct: guess == state.get_expected_char(),
-                }
-            }
+            KeyCode::Char(guess) => UserInput::Guess {
+                correct: guess == state.get_expected_char(),
+            },
             KeyCode::Backspace => UserInput::Request(UserRequest::Hint),
             _ => UserInput::Guess { correct: false },
         }

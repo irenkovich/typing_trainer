@@ -1,8 +1,10 @@
+use crate::data::Task;
+
 pub struct State {
     counter: u32,
     in_row: u32,
     print_hint: bool,
-    current_task: String,
+    current_task: Task,
     last_guess_err: bool,
 }
 
@@ -12,17 +14,17 @@ impl State {
             counter: 0,
             in_row: 0,
             print_hint: false,
-            current_task: String::new(),
+            current_task: Task::default(),
             last_guess_err: false,
         }
     }
 
-    pub fn set_current_task(&mut self, next: &str) {
-        self.current_task = next.to_string();
+    pub fn set_current_task(&mut self, next: Task) {
+        self.current_task = next;
     }
 
     pub fn task_in_progress(&self) -> bool {
-        !self.current_task.is_empty()
+        !&self.current_task.get_task().is_empty()
     }
 
     pub fn enable_hint(&mut self) {
@@ -37,7 +39,7 @@ impl State {
         self.counter += 1;
         self.in_row += 1;
         self.last_guess_err = false;
-        self.current_task = self.current_task.chars().skip(1).collect();
+        self.current_task.cut_first_in_task();
     }
 
     pub fn process_incorrect_guess(&mut self) {
@@ -57,7 +59,7 @@ impl State {
         self.print_hint
     }
 
-    pub fn current_task(&self) -> &str {
+    pub fn current_task(&self) -> &Task {
         &self.current_task
     }
 
@@ -66,12 +68,6 @@ impl State {
     }
 
     pub fn get_expected_char(&self) -> char {
-        self.current_task.chars().next().unwrap()
-    }
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self::new()
+        self.current_task.get_task().chars().next().unwrap()
     }
 }

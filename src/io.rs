@@ -9,7 +9,7 @@ use crate::state::State;
 
 pub fn print_hint(hint_map: &HashMap<char, String>, target_char: char) {
     let hint = hint_map
-        .get(&target_char)
+        .get(&target_char.to_lowercase().next().unwrap())
         .map_or(String::from("No hint for this :("), |x| x.clone())
         .green();
     println!("{hint}");
@@ -18,7 +18,7 @@ pub fn print_hint(hint_map: &HashMap<char, String>, target_char: char) {
 pub fn print_instructions(state: &State) {
     let counter_in_row = state.in_row();
     let counter = state.counter();
-    let task = state.current_task();
+    let task = state.current_task().get_task();
 
     let sweet_words = get_sweet_words_for_typer(counter_in_row);
     println!(

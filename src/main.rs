@@ -3,10 +3,9 @@ use std::time::Instant;
 use rand::Rng;
 
 use crate::{
-    data::{ProgramData, Resource},
+    data::ProgramData,
     state::State,
-    user::UserInput,
-    user::UserRequest,
+    user::{UserInput, UserRequest},
 };
 
 pub mod data;
@@ -22,13 +21,18 @@ fn main() {
 
     let hint_map = program_data.get_hints();
 
-    let mut state = State::new();
     let mut rng = rand::rng();
+
+    let mut state = State::new();
 
     let start = Instant::now();
     'main_loop: while !content.is_empty() {
         let rand_index = Rng::random_range(&mut rng, 0..content.len());
-        state.set_current_task(content.get(rand_index).unwrap());
+        let task = content.get(rand_index).unwrap().clone();
+        //prevent duplicates
+        content.remove(rand_index);
+
+        state.set_current_task(task);
 
         while state.task_in_progress() {
             io::clear_terminal();
@@ -57,8 +61,6 @@ fn main() {
                 }
             }
         }
-        // prevent duplicates
-        content.remove(rand_index);
     }
 
     let elapsed = start.elapsed();
