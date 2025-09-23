@@ -3,9 +3,9 @@ use std::time::Instant;
 use rand::Rng;
 
 use crate::{
-    data::ProgramData,
+    data::{BuiltinMode, ProgramData},
     state::State,
-    user::{UserInput, UserRequest},
+    user::{UserInput, UserRequest, choose_mode},
 };
 
 pub mod data;
@@ -15,7 +15,10 @@ pub mod user;
 
 fn main() {
     io::clear_terminal();
-    let program_data = ProgramData::default();
+
+    println!("Choose mode:\n1. Russian\n2. Greek\n");
+    let mode: BuiltinMode = choose_mode();
+    let program_data = ProgramData::new(mode);
 
     let mut content = program_data.get_content().clone();
 

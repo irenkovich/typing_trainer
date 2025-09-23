@@ -30,6 +30,12 @@ pub fn print_instructions(state: &State) {
     println!("Scores: {}. {sweet_words}", counter.to_string().green());
     println!();
 
+    let mdata = state.current_task().get_mdata();
+    if let Some(md) = mdata {
+        println!("{md}");
+        println!();
+    }
+
     let fisrt_char = if state.last_guess_err() {
         task.chars().next().unwrap().on_red()
     } else {

@@ -2,6 +2,11 @@ use std::{collections::HashMap, io::Cursor};
 
 use serde::Deserialize;
 
+pub enum BuiltinMode {
+    Russian,
+    Greek,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Task {
     task: String,
@@ -15,6 +20,10 @@ impl Task {
 
     pub fn cut_first_in_task(&mut self) {
         self.task = self.task.chars().skip(1).collect();
+    }
+
+    pub fn get_mdata(&self) -> Option<&str> {
+        self.metadata.as_deref()
     }
 }
 
@@ -40,6 +49,18 @@ pub struct ProgramData {
 }
 
 impl ProgramData {
+    pub fn new(mode: BuiltinMode) -> Self {
+        match mode {
+            BuiltinMode::Russian => ProgramData {
+                content: load_builtin_content(include_bytes!("data/tasks/russian.csv")),
+                hints: load_builtin_hints(include_bytes!("data/hints/russian.csv")),
+            },
+            BuiltinMode::Greek => ProgramData {
+                content: load_builtin_content(include_bytes!("data/tasks/greek.csv")),
+                hints: load_builtin_hints(include_bytes!("data/hints/greek.csv")),
+            },
+        }
+    }
     pub fn get_hints(&self) -> &HashMap<char, String> {
         &self.hints
     }
@@ -49,18 +70,8 @@ impl ProgramData {
     }
 }
 
-impl Default for ProgramData {
-    fn default() -> Self {
-        ProgramData {
-            hints: load_builtin_hints(),
-            content: load_builtin_content(),
-        }
-    }
-}
-
-fn load_builtin_hints() -> HashMap<char, String> {
-    let russian_hints = include_bytes!("data/hints/russian.csv");
-    let reader = Cursor::new(russian_hints);
+fn load_builtin_hints(hints_bytes: &[u8]) -> HashMap<char, String> {
+    let reader = Cursor::new(hints_bytes);
     let mut task_reader = csv::ReaderBuilder::new()
         .delimiter(b'~')
         .from_reader(reader);
@@ -73,9 +84,8 @@ fn load_builtin_hints() -> HashMap<char, String> {
     hints
 }
 
-fn load_builtin_content() -> Vec<Task> {
-    let russian_tasks = include_bytes!("data/tasks/russian.csv");
-    let reader = Cursor::new(russian_tasks);
+fn load_builtin_content(tasks_bytes: &[u8]) -> Vec<Task> {
+    let reader = Cursor::new(tasks_bytes);
     let mut task_reader = csv::ReaderBuilder::new()
         .delimiter(b'~')
         .from_reader(reader);

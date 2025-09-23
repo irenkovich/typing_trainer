@@ -1,6 +1,6 @@
 use crossterm::event::{self, Event, KeyCode};
 
-use crate::{io, state::State};
+use crate::{data::BuiltinMode, io, state::State};
 
 pub enum UserRequest {
     Hint,
@@ -10,6 +10,25 @@ pub enum UserRequest {
 pub enum UserInput {
     Request(UserRequest),
     Guess { correct: bool },
+}
+
+pub fn choose_mode() -> BuiltinMode {
+    io::listen_keys_pressing();
+
+    let result = loop {
+        if let Event::Key(key_event) = event::read().unwrap() {
+            match key_event.code {
+                KeyCode::Char(var) => match var {
+                    '1' => break BuiltinMode::Russian,
+                    '2' => break BuiltinMode::Greek,
+                    _ => continue,
+                },
+                _ => continue,
+            }
+        }
+    };
+    io::stop_listening_keys_pressing();
+    result
 }
 
 pub fn process_user_input(state: &State) -> UserInput {
